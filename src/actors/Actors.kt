@@ -27,7 +27,7 @@ fun CoroutineScope.setupFactory(control: FactoryControl) {
     launch {
         repeat(1000) {
             delay(800)
-            // Inform worker that it is time to wake up
+            workerChannel.send(WakeupWorkerMessage())
         }
         managerChannel.close()
         workerChannel.close()
@@ -35,11 +35,35 @@ fun CoroutineScope.setupFactory(control: FactoryControl) {
 }
 
 fun CoroutineScope.managerActor(control: FactoryControl) = actor<ManagerMessages> {
-    TODO()
+    var codes = 0;
+    for (message in channel) {
+        when (message) {
+            is MachineProducedMessage -> {
+                if (codes >= 20) {
+                    coroutineContext.cancel()
+                }
+                else {
+                    codes++
+                    control.storeCode(message.code)
+                }
+            }
+        }
+    }
 }
 
 fun CoroutineScope.workerActor(control: FactoryControl, managerChannel: SendChannel<ManagerMessages>) = actor<WorkerMessages> {
-    TODO()
+    var workingMachines = 0
+    for (message in channel) {
+        when (message) {
+            is WakeupWorkerMessage -> {
+                if (workingMachines < 5) {
+                    createMachine(channel, managerChannel, control)
+                    workingMachines++
+                }
+            }
+            is MachineBrokenMessage -> workingMachines--
+        }
+    }
 }
 
 fun CoroutineScope.createMachine(workerChannel: SendChannel<WorkerMessages>, managerChannel: SendChannel<ManagerMessages>, control: FactoryControl) {
@@ -49,16 +73,23 @@ fun CoroutineScope.createMachine(workerChannel: SendChannel<WorkerMessages>, man
             repeat(1000) {
                 delay(1000)
                 val code = machine.produce()
-                // TODO: Inform manager about code
+                managerChannel.send(MachineProducedMessage(code))
             }
         } catch (productionError: ProductionError) {
-            // TODO: Inform worker
+            workerChannel.send(MachineBrokenMessage())
         }
     }
 }
 
 interface ManagerMessages
+
+class MachineProducedMessage(val code: String) : ManagerMessages
+
 interface WorkerMessages
+
+class WakeupWorkerMessage : WorkerMessages
+
+class MachineBrokenMessage : WorkerMessages
 
 interface FactoryControl {
     fun makeMachine(): Machine
