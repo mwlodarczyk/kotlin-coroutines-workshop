@@ -1,18 +1,18 @@
 package request
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.junit.jupiter.api.Test
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
-/*
-   TODO: This function should return the best student on the [semester].
- */
-suspend fun getBestStudent(semester: String, repo: StudentsRepository): Student = TODO()
+suspend fun getBestStudent(semester: String, repo: StudentsRepository): Student = coroutineScope {
+    repo.getStudentIds(semester)
+            .map { id -> async { repo.getStudent(id) } }
+            .map { student -> student.await() } //.awaitAll()
+            .maxBy { student -> student.result } ?: throw NoSuchElementException()
+}
 
 data class Student(val id: Int, val result: Double, val semester: String)
 
@@ -96,12 +96,12 @@ inline fun assertTimeAround(expectedTime: Int, upperMargin: Int = 100, body: () 
     }
 }
 
-inline fun <reified T: Throwable> assertThrowsError(body: ()->Unit) {
+inline fun <reified T : Throwable> assertThrowsError(body: () -> Unit) {
     try {
         body()
         assert(false) { "There should be an error of type ${T::class.simpleName}" }
     } catch (throwable: Throwable) {
-        if(throwable !is T) {
+        if (throwable !is T) {
             throw throwable
         }
     }
@@ -134,7 +134,8 @@ class FirstFailingFakeStudentRepo : StudentsRepository {
 
     override suspend fun getStudent(id: Int): Student {
         delay(100)
-        mutex.withLock { // To prevent more than one throwing
+        mutex.withLock {
+            // To prevent more than one throwing
             if (first) {
                 first = false
                 throw FirstFailingError()
@@ -145,5 +146,5 @@ class FirstFailingFakeStudentRepo : StudentsRepository {
         return Student(12, 12.0, "AAA")
     }
 
-    class FirstFailingError(): Error()
+    class FirstFailingError() : Error()
 }
