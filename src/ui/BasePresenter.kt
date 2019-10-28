@@ -1,7 +1,6 @@
 package ui
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.repackaged.net.bytebuddy.implementation.bind.annotation.Super
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
