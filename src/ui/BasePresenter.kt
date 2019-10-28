@@ -1,6 +1,7 @@
 package ui
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.repackaged.net.bytebuddy.implementation.bind.annotation.Super
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -11,7 +12,7 @@ abstract class BasePresenter(
         private val onError: (Throwable) -> Unit = {}
 ) : CoroutineScope {
 
-    private val job = Job()
+    private val job = SupervisorJob()
     private val context = Dispatchers.Main
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable -> onError(throwable) }
 
@@ -21,7 +22,7 @@ abstract class BasePresenter(
     fun onDestroy() {
         job.cancel()
     }
-    
+
 }
 
 @Suppress("FunctionName")

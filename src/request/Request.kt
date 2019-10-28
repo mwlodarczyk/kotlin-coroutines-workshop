@@ -3,6 +3,8 @@ package request
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
@@ -24,7 +26,7 @@ interface StudentsRepository {
 class RequestTest {
 
     @Test
-    fun `Function does return the best student in the semester`() = runBlocking {
+    fun `Function does return the best student in the semester`() = runBlockingTest {
         val semester = "19L"
         val best = Student(2, 95.0, semester)
         val repo = ImmediateFakeStudentRepo(listOf(
@@ -37,7 +39,7 @@ class RequestTest {
     }
 
     @Test
-    fun `When no students, correct error is thrown`() = runBlocking {
+    fun `When no students, correct error is thrown`() = runBlockingTest {
         val semester = "19L"
         val best = Student(2, 95.0, semester)
         val repo = ImmediateFakeStudentRepo(listOf())
@@ -47,7 +49,7 @@ class RequestTest {
     }
 
     @Test
-    fun `Requests do not wait for each other`() = runBlocking {
+    fun `Requests do not wait for each other`() = runBlockingTest {
         val repo = WaitingFakeStudentRepo()
         assertTimeAround(1200) {
             val chosen = getBestStudent("AAA", repo)
@@ -55,7 +57,7 @@ class RequestTest {
     }
 
     @Test
-    fun `Cancellation works fine`() = runBlocking {
+    fun `Cancellation works fine`() = runBlockingTest {
         val repo = WaitingFakeStudentRepo()
         val job = launch {
             val chosen = getBestStudent("AAA", repo)
@@ -89,7 +91,7 @@ class ImmediateFakeStudentRepo(
             students.first { it.id == id }
 }
 
-inline fun assertTimeAround(expectedTime: Int, upperMargin: Int = 100, body: () -> Unit) {
+inline fun TestCoroutineScope.assertTimeAround(expectedTime: Int, upperMargin: Int = 100, body: () -> Unit) {
     val actualTime = measureTimeMillis(body)
     assert(actualTime in expectedTime..(expectedTime + upperMargin)) {
         "Operation should take around $expectedTime, but it took $actualTime"
@@ -146,5 +148,12 @@ class FirstFailingFakeStudentRepo : StudentsRepository {
         return Student(12, 12.0, "AAA")
     }
 
-    class FirstFailingError() : Error()
+    class FirstFailingError : Error()
+}
+
+@ExperimentalCoroutinesApi
+inline fun TestCoroutineScope.measureTimeMillis(block: () -> Unit): Long {
+    val start = currentTime
+    block()
+    return currentTime - start
 }

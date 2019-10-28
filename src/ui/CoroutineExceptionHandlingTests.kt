@@ -1,9 +1,8 @@
 package ui
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.*
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -11,21 +10,27 @@ import kotlin.test.assertTrue
 @Suppress("FunctionName")
 class CoroutineExceptionHandlingTests {
 
-    class FakePresenterForSingleExceptionHandling(val onSecondAction: ()->Unit) : BasePresenter() {
+    class FakePresenterForSingleExceptionHandling(val onSecondAction: () -> Unit) : BasePresenter() {
 
         var cancelledJobs = 0
 
         fun onCreate() {
-            // TODO Uncomment
-//            launch {
-//                delay(100)
-//                throw Error()
-//            }
-//            launch {
-//                delay(200)
-//                onSecondAction()
-//            }
+            launch {
+                delay(100)
+                throw Error()
+            }
+            launch {
+                delay(200)
+                onSecondAction()
+            }
         }
+    }
+
+    private val UI = newSingleThreadContext("UIThread") // Normally it will be Dispatchers.Main
+
+    @BeforeEach
+    fun setUp() {
+        Dispatchers.setMain(UI)
     }
 
     @Test
