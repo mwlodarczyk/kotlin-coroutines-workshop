@@ -2,22 +2,27 @@ package ui
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.setMain
-import org.junit.Before
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.assertEquals
 
-
-// TODO: Edit only this class
 abstract class BasePresenter(
         private val onError: (Throwable) -> Unit = {}
-) {
+) : CoroutineScope {
 
-    fun onDestroy() {}
+    private val job = Job()
+    private val context = Dispatchers.Main
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable -> onError(throwable) }
+
+    override val coroutineContext: CoroutineContext
+        get() = job + context + exceptionHandler
+
+    fun onDestroy() {
+        job.cancel()
+    }
+    
 }
-
 
 @Suppress("FunctionName")
 class BasePresenterTests {
@@ -38,24 +43,24 @@ class BasePresenterTests {
 
         fun onCreate() {
             // TODO Uncomment
-//            launch {
-//                try {
-//                    delay(100)
-//                    jobInterceptor?.invoke()
-//                    delay(2000)
-//                } finally {
-//                    cancelledJobs += 1
-//                }
-//            }
-//            launch {
-//                try {
-//                    delay(100)
-//                    jobInterceptor?.invoke()
-//                    delay(2000)
-//                } finally {
-//                    cancelledJobs += 1
-//                }
-//            }
+            launch {
+                try {
+                    delay(100)
+                    jobInterceptor?.invoke()
+                    delay(2000)
+                } finally {
+                    cancelledJobs += 1
+                }
+            }
+            launch {
+                try {
+                    delay(100)
+                    jobInterceptor?.invoke()
+                    delay(2000)
+                } finally {
+                    cancelledJobs += 1
+                }
+            }
         }
     }
 
