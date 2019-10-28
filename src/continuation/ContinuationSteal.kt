@@ -1,9 +1,11 @@
 @file:UseExperimental(ExperimentalCoroutinesApi::class)
+
 package continuation
 
 import kotlinx.coroutines.*
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 fun main(): Unit = runBlocking<Unit> {
     val cont = continuationSteal<String>()
@@ -15,8 +17,10 @@ fun <T> continuationSteal(console: Console = Console()): Continuation<T>? = runB
     var continuation: Continuation<T>? = null
     GlobalScope.launch(Dispatchers.Unconfined) {
         console.println("Before")
-        // TODO: Suspend in here and store continuation in continuation.
-        // TODO: After continuation resume, print using `console` the value that was passed.
+        val data = suspendCoroutine<T> { cont ->
+            continuation = cont
+        }
+        console.println(data)
         console.println("After")
     }
     continuation
